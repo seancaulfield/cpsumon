@@ -159,6 +159,7 @@ unsigned char * data_read_dongle(int fd, int size, int * command) {
     size *= 2;
 
     char r;
+    usleep(20);
     if ((r = xread(fd, buffer, size - 1, 2)) == 0) return NULL;
 
 //    printf("read=%d, exp=%d\n", r, size);

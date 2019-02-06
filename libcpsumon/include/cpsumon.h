@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <fcntl.h>
 #include <termios.h>
 #include <math.h>
+#include <time.h>
 
 #define TYPE_AX760  0
 #define TYPE_AX860  1
@@ -99,6 +100,7 @@ unsigned char decode_table[256] =
 			  0x00
 			};
 
+int open_usb(char *device);
 int xread(int f, void * b, int s, int timeout);
 int xwrite(int fd, void * buffer, unsigned int len);
 void dump(unsigned char *buf, int dlen);

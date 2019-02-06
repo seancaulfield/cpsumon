@@ -15,3 +15,6 @@ add_library(${PROJECT_NAME} SHARED ${PROJECT1_SRCS})
 
 target_include_directories(cpsumon PUBLIC include)
 
+install (TARGETS cpsumon
+        RUNTIME DESTINATION /sbin
+        LIBRARY DESTINATION /lib64)

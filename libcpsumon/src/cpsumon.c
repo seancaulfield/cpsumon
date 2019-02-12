@@ -93,6 +93,7 @@ unsigned char * decode_answer(unsigned char *data, int size, int * nsize) {
 
 	if (!ret) return NULL;
 
+
 	for (i = 1; i <= size; i += 2) {
 	    ret[j++] = (decode_table[data[i]] & 0xf) | ((decode_table[data[i + 1]] & 0xf) << 4);
 	}
@@ -110,7 +111,6 @@ unsigned char * encode_answer(unsigned char command, unsigned char *data, int si
 
     unsigned char *ret = (unsigned char *) malloc(newsize);
     if (!ret) return NULL;
-
     ret[0] = encode_table[(command << 1) & 0xf] & 0xfc;
     ret[newsize - 1] = 0;
 
@@ -185,6 +185,51 @@ int data_write_dongle(int fd, unsigned char * datain, int size) {
     return (ret != s) ? -1 : 0;
 }
 
+int send_init(int fd) {
+    int s = 16;
+    char d[16] = {0x54, 0x56, 0x56, 0x59, 0x55, 0x65, 0x69, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x00};
+    char *data = d;
+//    printf("INIT DATA TO WRITE:\n");
+//    dump(data, s);
+    int ret = xwrite(fd, data, s);
+
+    return (ret != s) ? -1 : 0;
+}
+
+int init_dongle(int fd) {
+    unsigned char buffer[1024];
+    memset(buffer, 0, 1024);
+    char r;
+    int retry = 3;
+    int answer = 0;
+    int done = 0;
+    int size = 2;
+    if (send_init(fd) !=0) return -1;
+    //unsigned char * ret = data_read_dongle(fd, 512, NULL);
+    //free(data);
+
+    //usleep(420);
+    if ((r = xread(fd, buffer, size, 2)) == 0) {
+        printf("Dongle communcation issue, retrying...");
+        do {
+            usleep(7000);
+            if (send_init(fd) !=0) return -1;
+            if ((r = xread(fd, buffer, size, 2)) != 0) done = 1;
+            retry--;
+        } while (done != 1 | retry >= 0);
+    } else {
+        done = 1;
+//        printf("read=%d, exp=%d\n", r, size);
+        return 0;
+        };
+    if ( done == 1){
+        return 0;
+    } else if (retry < 0) {
+        printf("Dongle init-sequence failed.");
+        };
+    return -1;
+}
+
 unsigned char * read_dongle_name(int fd) {
     char d[1] = {2};
 
@@ -225,6 +270,7 @@ unsigned char * read_data_psu(int fd, int reg, int len) {
 
     ret = data_read_dongle(fd, len + 1, NULL);
 
+//    printf("Read data psu:\n");
 //    dump(ret, len + 1);
 
     return ret;
@@ -244,7 +290,8 @@ unsigned char * write_data_psu(int fd, int reg, char * data, int len) {
 
     unsigned char * ret = data_read_dongle(fd, 1, NULL);
 
-    //dump(ret, 2);
+//    printf("Write data psu:\n");
+//    dump(ret, 2);
 
     return ret;
 }
@@ -513,6 +560,8 @@ int setup_dongle(int fd) {
     unsigned char * ret;
     char d[7] = {17, 2, 100, 0, 0, 0, 0};
     float f = 0.0;
+
+    if (init_dongle(fd) != 0) return -1;
 
     if ((ret = read_dongle_name(fd)) == NULL) return -1;
     printf("Dongle name: %s\n", ret);

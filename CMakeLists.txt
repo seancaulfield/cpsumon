@@ -12,5 +12,5 @@ target_link_libraries (cpsumoncli cpsumon m)
 target_link_libraries (cpsufancli cpsumon m)
 
 install (TARGETS cpsufancli cpsumoncli
-	RUNTIME DESTINATION /sbin
-	LIBRARY DESTINATION /lib64)
+	RUNTIME DESTINATION sbin
+	LIBRARY DESTINATION lib64)

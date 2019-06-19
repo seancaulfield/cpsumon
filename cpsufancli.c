@@ -1,7 +1,8 @@
-#include <cpsumon.h>
-#include <cpsumoncli.h>
 #include <stdlib.h>
 #include <string.h>
+#include "dongle.h"
+#include "psu.h"
+#include "cpsumoncli.h"
 
 void about() {
   printf("Corsair AXi Series PSU Monitor\n");

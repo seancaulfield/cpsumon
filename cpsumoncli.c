@@ -1,6 +1,6 @@
-#include <cpsumon.h>
-#include <cpsumoncli.h>
-
+#include "dongle.h"
+#include "psu.h"
+#include "cpsumoncli.h"
 
 int main (int argc, char * argv[]) {
     int fd;

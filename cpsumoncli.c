@@ -1,5 +1,7 @@
 #include <cpsumon.h>
 #include <cpsumoncli.h>
+#include <time.h>
+#include <string.h>
 
 int print_stats(const char *name, float voltage, float current, float power) {
     return printf(
@@ -18,7 +20,7 @@ int print_stats_12v( const char *name, float voltage, float current, float power
     return print_stats(name, voltage, current, power) && printf(
         ", \"ocp\": %d,"
         "\"ocp_limit\": %01.8g"
-        "},\n",
+        "}, ",
         ocp_enabled,
         ocp_limit
     );
@@ -34,7 +36,15 @@ int main (int argc, char * argv[]) {
     //printf("Corsair AXi Series PSU Monitor\n");
     //printf("(c) 2014 Andras Kovacs - andras@sth.sze.hu\n");
     //printf("-------------------------------------------\n\n");
-    printf("{\n");
+
+    const int BUFFSIZE = 26;
+    struct tm now;
+    char timestr[BUFFSIZE]; // Just enough for ISO8601
+    time_t ts = time(NULL);
+    gmtime_r(&ts, &now);
+    strftime(&timestr, BUFFSIZE, "%FT%T%z", &now);
+
+    printf("{\"timestamp\": \"%s\", ", timestr);
 
     if (argc < 2) {
         printf("usage: %s <serial port device>\n", argv[0]);
@@ -64,32 +74,32 @@ int main (int argc, char * argv[]) {
         exit(-1);
 
     if (i == FANMODE_AUTO) {
-        printf("\"fan_mode\": \"Auto\",\n");
+        printf("\"fan_mode\": \"Auto\", ");
     } else if (i == FANMODE_FIXED) {
-        printf("\"fan_mode\": \"Fixed\",\n");
+        printf("\"fan_mode\": \"Fixed\", ");
 
         if (read_psu_fan_fixed_percent(fd, &i) == -1)
             exit(-1);
-        printf("\"fan_setting\": %d,\n", i);
+        printf("\"fan_setting\": %d, ", i);
     }
 
     if (read_psu_fan_speed(fd, &f) == -1)
         exit(-1);
-    printf("\"fan_speed\": %01.8g,\n", f);
+    printf("\"fan_speed\": %01.8g, ", f);
     if (read_psu_temp(fd, &f) == -1)
         exit(-1);
-    printf("\"temperature\": %01.8g,\n", f);
+    printf("\"temperature\": %01.8g, ", f);
 
     if (read_psu_main_power(fd) == -1)
         exit(-1);
 
-    printf("\"voltage\": %01.8g,\n", _psumain.voltage);
-    printf("\"current\": %01.8g,\n", _psumain.current);
-    printf("\"power_in\": %01.8g,\n", _psumain.inputpower);
-    printf("\"power_out\": %01.8g,\n", _psumain.outputpower);
+    printf("\"voltage\": %01.8g, ", _psumain.voltage);
+    printf("\"current\": %01.8g, ", _psumain.current);
+    printf("\"power_in\": %01.8g, ", _psumain.inputpower);
+    printf("\"power_out\": %01.8g, ", _psumain.outputpower);
     //if (_psu_type == TYPE_AX1500)
     //    printf("Cable type: %s\n", (_psumain.cabletype ? "20 A" : "15 A"));
-    printf("\"efficiency\": %01.8g,\n", _psumain.efficiency);
+    printf("\"efficiency\": %01.8g, ", _psumain.efficiency);
 
     if (read_psu_rail12v(fd) == -1)
         exit(-1);
@@ -101,7 +111,7 @@ int main (int argc, char * argv[]) {
             "\"current\": %01.8g,"
             "\"power\": %01.8g,"
             "\"ocp\": %d,"
-            "\"ocp_limit\": %01.8g},\n",
+            "\"ocp_limit\": %01.8g}, ",
             i,
             _rail12v.pcie[i].voltage,
             _rail12v.pcie[i].current,
@@ -116,7 +126,7 @@ int main (int argc, char * argv[]) {
         "\"current\": %01.8g,"
         "\"power\": %01.8g,"
         "\"ocp\": %d,"
-        "\"ocp_limit\": %01.8g},\n",
+        "\"ocp_limit\": %01.8g}, ",
         _rail12v.atx.voltage,
         _rail12v.atx.current,
         _rail12v.atx.power,
@@ -129,7 +139,7 @@ int main (int argc, char * argv[]) {
     //    "%01.8g,"
     //    "%01.8g,"
     //    "\"ocp\": %d,"
-    //    "\"ocp_limit\": %01.8g},\n",
+    //    "\"ocp_limit\": %01.8g}, ",
     //    _rail12v.peripheral.voltage,
     //    _rail12v.peripheral.current,
     //    _rail12v.peripheral.power,
@@ -148,7 +158,7 @@ int main (int argc, char * argv[]) {
     if(read_psu_railmisc(fd) == -1) exit(-1);
 
     print_stats("5v_rail", _railmisc.rail_5v.voltage, _railmisc.rail_5v.current, _railmisc.rail_5v.power);
-    printf("},\n");
+    printf("}, ");
     //printf("\"5v_rail\":"
     //    "%01.8g,"
     //    "%01.8g,"
@@ -168,7 +178,7 @@ int main (int argc, char * argv[]) {
     //);
     print_stats("3v3_rail", _railmisc.rail_3_3v.voltage, _railmisc.rail_3_3v.current, _railmisc.rail_3_3v.power);
 
-    printf("}\n}\n");
+    printf("}}\n");
 
     close(fd);
     return 0;

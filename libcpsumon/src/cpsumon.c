@@ -365,7 +365,7 @@ int read_psu_rail12v(int fd) {
     for (i = 0; i < chnnum + 2; i++) {
 //	printf("chnnum=%d\n", i);
 	if (set_main_page(fd, 0) == -1) return -1;
-	if (set_12v_page(fd, (_psu_type != TYPE_AX1200 && _psu_type != TYPE_AX1500 && i >= chnnum) ? i + 2 : i) == -1) return -1;
+	if (set_12v_page(fd, (_psu_type != TYPE_AX1200 && _psu_type != TYPE_AX1500 && i >= chnnum) ? i + 2 : i + 1) == -1) return -1;
 
 	if ((ret = read_data_psu(fd, 0x8b, 2)) == NULL) return -1;
 	    if (i == chnnum) _rail12v.atx.voltage = convert_byte_float(ret);
@@ -515,7 +515,7 @@ int setup_dongle(int fd) {
     float f = 0.0;
 
     if ((ret = read_dongle_name(fd)) == NULL) return -1;
-    printf("Dongle name: %s\n", ret);
+    printf("\"dongle_name\": \"%s\",\n", ret);
     free(ret);
 
     if (data_write_dongle(fd, d, 7) != 0) return -1;
@@ -528,7 +528,7 @@ int setup_dongle(int fd) {
 
     if (read_dongle_version(fd, &f) == -1) return -1;
 
-    printf("Dongle version: %0.1f\n", f);
+    printf("\"dongle_version\": \"%0.1f\",\n", f);
 
     if ((ret = read_data_psu(fd, 0x9a, 7)) == NULL) return -1;
 //    dump(ret, 7);
@@ -540,7 +540,7 @@ int setup_dongle(int fd) {
 
     free(ret);
 
-    printf("PSU type: %s\n", dump_psu_type(_psu_type));
+    printf("\"psu_type\": \"%s\",\n", dump_psu_type(_psu_type));
 
     return 0;
 }

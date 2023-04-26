@@ -1,6 +1,28 @@
 #include <cpsumon.h>
 #include <cpsumoncli.h>
 
+int print_stats(const char *name, float voltage, float current, float power) {
+    return printf(
+        "\"%s\":{"
+        "\"voltage\": %01.8g, "
+        "\"current\": %01.8g, "
+        "\"power\": %01.8g",
+        name,
+        voltage,
+        current,
+        power
+    );
+}
+
+int print_stats_12v( const char *name, float voltage, float current, float power, int ocp_enabled, float ocp_limit) {
+    return print_stats(name, voltage, current, power) && printf(
+        ", \"ocp\": %d,"
+        "\"ocp_limit\": %01.8g"
+        "},\n",
+        ocp_enabled,
+        ocp_limit
+    );
+}
 
 int main (int argc, char * argv[]) {
     int fd;
@@ -9,18 +31,18 @@ int main (int argc, char * argv[]) {
 
     _psu_type = TYPE_AX760;
 
-    printf("Corsair AXi Series PSU Monitor\n");
-    printf("(c) 2014 Andras Kovacs - andras@sth.sze.hu\n");
-    printf("-------------------------------------------\n\n");
+    //printf("Corsair AXi Series PSU Monitor\n");
+    //printf("(c) 2014 Andras Kovacs - andras@sth.sze.hu\n");
+    //printf("-------------------------------------------\n\n");
+    printf("{\n");
 
     if (argc < 2) {
-	printf("usage: %s <serial port device>\n", argv[0]);
-	return 0;
+        printf("usage: %s <serial port device>\n", argv[0]);
+        return 0;
     }
 
     fd = open_usb(argv[1]);
-    if(fd == -1)
-    {
+    if(fd == -1) {
         return -1;
     }
     memset(&tio, 0, sizeof(tio));
@@ -35,51 +57,121 @@ int main (int argc, char * argv[]) {
 
     float f;
 
-    if (setup_dongle(fd) == -1) exit(-1);
+    if (setup_dongle(fd) == -1)
+        exit(-1);
 
-    if (read_psu_fan_mode(fd, &i) == -1) exit(-1);
-    if (i == FANMODE_AUTO) printf("Fan mode: Auto\n");
-    else if (i == FANMODE_FIXED) {
-      printf("Fan mode: Fixed\n");
+    if (read_psu_fan_mode(fd, &i) == -1)
+        exit(-1);
 
-      if (read_psu_fan_fixed_percent(fd, &i) == -1) exit(-1);
-      printf("Fan setting: %d %%\n", i);
+    if (i == FANMODE_AUTO) {
+        printf("\"fan_mode\": \"Auto\",\n");
+    } else if (i == FANMODE_FIXED) {
+        printf("\"fan_mode\": \"Fixed\",\n");
+
+        if (read_psu_fan_fixed_percent(fd, &i) == -1)
+            exit(-1);
+        printf("\"fan_setting\": %d,\n", i);
     }
 
-    if (read_psu_fan_speed(fd, &f) == -1) exit(-1);
-    printf("Fan speed: %0.2f RPM\n", f);
-    if (read_psu_temp(fd, &f) == -1) exit(-1);
-    printf("Temperature: %0.2f °C\n", f);
+    if (read_psu_fan_speed(fd, &f) == -1)
+        exit(-1);
+    printf("\"fan_speed\": %01.8g,\n", f);
+    if (read_psu_temp(fd, &f) == -1)
+        exit(-1);
+    printf("\"temperature\": %01.8g,\n", f);
 
-    if (read_psu_main_power(fd) == -1) exit(-1);
+    if (read_psu_main_power(fd) == -1)
+        exit(-1);
 
-    printf("Voltage: %0.2f V\n", _psumain.voltage);
-    printf("Current: %0.2f A\n", _psumain.current);
-    printf("Input power: %0.2f W\n", _psumain.inputpower);
-    printf("Output power: %0.2f W\n", _psumain.outputpower);
-    if (_psu_type == TYPE_AX1500)
-	    printf("Cable type: %s\n", (_psumain.cabletype ? "20 A" : "15 A"));
-    printf("Efficiency: %0.2f %%\n", _psumain.efficiency);
+    printf("\"voltage\": %01.8g,\n", _psumain.voltage);
+    printf("\"current\": %01.8g,\n", _psumain.current);
+    printf("\"power_in\": %01.8g,\n", _psumain.inputpower);
+    printf("\"power_out\": %01.8g,\n", _psumain.outputpower);
+    //if (_psu_type == TYPE_AX1500)
+    //    printf("Cable type: %s\n", (_psumain.cabletype ? "20 A" : "15 A"));
+    printf("\"efficiency\": %01.8g,\n", _psumain.efficiency);
 
-    if (read_psu_rail12v(fd) == -1) exit(-1);
+    if (read_psu_rail12v(fd) == -1)
+        exit(-1);
 
     int chnnum = (_psu_type == TYPE_AX1500 ? 10 : ((_psu_type == TYPE_AX1200) ? 8 : 6));
     for (i = 0; i < chnnum; i++) {
-	printf("PCIe %02d Rail:    %0.2f V, %0.2f A, %0.2f W, OCP %s (Limit: %0.2f A)\n", i, _rail12v.pcie[i].voltage,
-	_rail12v.pcie[i].current, _rail12v.pcie[i].power, (_rail12v.pcie[i].ocp_enabled ? "enabled " : "disabled"), _rail12v.pcie[i].ocp_limit);
+        printf("\"pcie_rail_%02d\": {"
+            "\"voltage\": %01.8g,"
+            "\"current\": %01.8g,"
+            "\"power\": %01.8g,"
+            "\"ocp\": %d,"
+            "\"ocp_limit\": %01.8g},\n",
+            i,
+            _rail12v.pcie[i].voltage,
+            _rail12v.pcie[i].current,
+            _rail12v.pcie[i].power,
+            _rail12v.pcie[i].ocp_enabled,
+            _rail12v.pcie[i].ocp_limit
+        );
     }
 
-    printf("ATX Rail:        %0.2f V, %0.2f A, %0.2f W, OCP %s (Limit: %0.2f A)\n", _rail12v.atx.voltage,
-	_rail12v.atx.current, _rail12v.atx.power, (_rail12v.atx.ocp_enabled ? "enabled " : "disabled"), _rail12v.atx.ocp_limit);
+    printf("\"12v_atx_rail\": {"
+        "\"voltage\": %01.8g,"
+        "\"current\": %01.8g,"
+        "\"power\": %01.8g,"
+        "\"ocp\": %d,"
+        "\"ocp_limit\": %01.8g},\n",
+        _rail12v.atx.voltage,
+        _rail12v.atx.current,
+        _rail12v.atx.power,
+        _rail12v.atx.ocp_enabled,
+        _rail12v.atx.ocp_limit
+    );
 
-    printf("Peripheral Rail: %0.2f V, %0.2f A, %0.2f W, OCP %s (Limit: %0.2f A)\n", _rail12v.peripheral.voltage,
-	_rail12v.peripheral.current, _rail12v.peripheral.power, (_rail12v.peripheral.ocp_enabled ? "enabled " : "disabled"), _rail12v.peripheral.ocp_limit);
+    //printf("\"12v_peripheral_rail\":"
+    //    "%01.8g,"
+    //    "%01.8g,"
+    //    "%01.8g,"
+    //    "\"ocp\": %d,"
+    //    "\"ocp_limit\": %01.8g},\n",
+    //    _rail12v.peripheral.voltage,
+    //    _rail12v.peripheral.current,
+    //    _rail12v.peripheral.power,
+    //    _rail12v.peripheral.ocp_enabled,
+    //    _rail12v.peripheral.ocp_limit
+    //);
+
+    print_stats_12v("12v_peripheral_rail",
+        _rail12v.peripheral.voltage,
+        _rail12v.peripheral.current,
+        _rail12v.peripheral.power,
+        _rail12v.peripheral.ocp_enabled,
+        _rail12v.peripheral.ocp_limit
+    );
 
     if(read_psu_railmisc(fd) == -1) exit(-1);
 
-    printf("5V Rail:         %0.2f V, %0.2f A, %0.2f W\n", _railmisc.rail_5v.voltage, _railmisc.rail_5v.current, _railmisc.rail_5v.power);
-    printf("3.3V Rail:       %0.2f V, %0.2f A, %0.2f W\n", _railmisc.rail_3_3v.voltage, _railmisc.rail_3_3v.current, _railmisc.rail_3_3v.power);
+    print_stats("5v_rail", _railmisc.rail_5v.voltage, _railmisc.rail_5v.current, _railmisc.rail_5v.power);
+    printf("},\n");
+    //printf("\"5v_rail\":"
+    //    "%01.8g,"
+    //    "%01.8g,"
+    //    "%01.8g,\n",
+    //    _railmisc.rail_5v.voltage,
+    //    _railmisc.rail_5v.current,
+    //    _railmisc.rail_5v.power);
+
+    // Last one so be sure NOT to include the trailing comma (b/c JSON is stupid)
+    //printf("\"3v3_rail\":"
+    //    "\"voltage\": %01.8g,"
+    //    "%01.8g,"
+    //    "%01.8g\n",
+    //    _railmisc.rail_3_3v.voltage,
+    //    _railmisc.rail_3_3v.current,
+    //    _railmisc.rail_3_3v.power
+    //);
+    print_stats("3v3_rail", _railmisc.rail_3_3v.voltage, _railmisc.rail_3_3v.current, _railmisc.rail_3_3v.power);
+
+    printf("}\n}\n");
 
     close(fd);
     return 0;
 }
+
+// vi: sw=4

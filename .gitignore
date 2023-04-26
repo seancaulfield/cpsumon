@@ -8,3 +8,4 @@ install_manifest.txt
 *#
 cpsumoncli
 libcpsumon/libcpsumon.so
+*.sw[po]
